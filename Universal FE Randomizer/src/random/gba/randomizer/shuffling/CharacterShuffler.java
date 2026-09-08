@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import javax.print.attribute.HashAttributeSet;
 
-import com.sun.jndi.ldap.pool.Pool;
 import fedata.gba.GBAFEChapterData;
 import fedata.gba.GBAFEChapterUnitData;
 import fedata.gba.GBAFECharacterData;
