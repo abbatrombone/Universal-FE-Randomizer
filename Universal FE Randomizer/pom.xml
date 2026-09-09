@@ -1,11 +1,17 @@
 <project xmlns="https://maven.apache.org/POM/4.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>Yune</groupId>
-  <artifactId>Yune</artifactId>
+  <groupId>com.github.lushen124</groupId>
+  <artifactId>yune</artifactId>
   <version>0.9.4</version>
   <name>Yune</name>
   <description>A Universal Fire Emblem Randomizer</description>
+  <properties>
+    <maven.compiler.source>26</maven.compiler.source>
+    <maven.compiler.target>26</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <build>
+  <defaultGoal>clean package</defaultGoal>
     <sourceDirectory>src</sourceDirectory>
     <resources>
       <resource>
@@ -17,13 +23,36 @@
     </resources>
     <plugins>
       <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
-          <source>26</source>
-          <target>26</target>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+              	<exclude>META-INF/*.MF</exclude>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+          <transformers>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+              <mainClass>application.Main</mainClass>
+            </transformer>
+          </transformers>
         </configuration>
-      </plugin>
+      </plugin>  
     </plugins>
   </build>
   
@@ -47,7 +76,7 @@
             <dependency>
                 <groupId>org.eclipse.platform</groupId>
                 <artifactId>org.eclipse.swt.win32.win32.x86_64</artifactId>
-                <version>3.134.0</version>
+                <version>3.135.0</version>
             </dependency>
         </dependencies>
     </profile>
@@ -63,7 +92,7 @@
             <dependency>
                 <groupId>org.eclipse.platform</groupId>
                 <artifactId>org.eclipse.swt.gtk.linux.x86_64</artifactId>
-                <version>3.134.0</version>
+                <version>3.135.0</version>
             </dependency>
         </dependencies>
     </profile>
@@ -79,7 +108,7 @@
             <dependency>
                 <groupId>org.eclipse.platform</groupId>
                 <artifactId>org.eclipse.swt.cocoa.macosx.aarch64</artifactId>
-                <version>3.134.0</version>
+                <version>3.135.0</version>
             </dependency>
         </dependencies>
     </profile>
