@@ -47,6 +47,8 @@ public interface GBAFEItemProvider {
 	public Set<GBAFEItem> itemKitForSpecialClass(int classID, Random rng);
 	public Set<GBAFEItem> playerOnlyWeapons();
 	
+	public Set<Integer> restrictedClassIDsForWeapon(GBAFEItem item);
+	
 	public GBAFEItem legendaryWeaponOfType(WeaponType type, boolean isLord);
 	
 	public Set<GBAFEItem> promoWeapons();
@@ -83,6 +85,7 @@ public interface GBAFEItemProvider {
 	public AdditionalData effectivenessPointerType(long effectivenessPtr);
 	
 	public GBAFEItemData itemDataWithData(byte[] data, long offset);
+	public GBAFEItemData duplicateItem(GBAFEItemData originalItem, int newID);
 	
 	public List<GBAFEClass> knightCavEffectivenessClasses();
 	public List<GBAFEClass> knightEffectivenessClasses();
@@ -100,5 +103,4 @@ public interface GBAFEItemProvider {
 	public int numberOfAnimations();
 	public int bytesPerAnimation();
 	public GBAFESpellAnimationCollection spellAnimationCollectionAtAddress(byte[] data, long offset);
-
 }

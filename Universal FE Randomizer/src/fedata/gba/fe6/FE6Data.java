@@ -84,6 +84,13 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
     //public static final long DefaultChapterMetadataArrayOffset = 0x6637A4;
     public static final int BytesPerChapterMetadata = 68;
 
+    // We're using the unused Demon Stone object to implement the Personal lord weapon.
+    // This is the only item we have that is unused, but still has spell animations enabled in all cases.
+    // Downside is that Thieves will steal this (with a pretty high priority too).
+    // We need to remove this item from their steal priority.
+    // Each entry is 2 bytes long with the first byte being the item ID (and the second being 00s).
+    // Remove the Demon Stone and shift everything up. The terminal item is FF FF.
+    public static final long ThiefAIStealableTableOffset = 0x5C8834L;
 	
 	public static final long PromotionItemTablePointer = 0x237AC; // Hero's Crest (0), Knights Crest (1), Orion Bolt (2), Elysian Whip (3), Guiding Ring (8)
 	
@@ -109,6 +116,54 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 	// equip.
 	public static final long ClassLookupMaxIndexOffset = 0x408CL; // Normally 0x3F as the max class ID.
 	public static final long RoyPromotionForcedEquippedItemOffset = 0x6D0F0L; // Normally 0xF for Binding Blade.
+	
+	// While we have nudges to account for unit loading coordinates,
+	// that won't catch scripted movement. Those have to be updated manually.
+	
+	// Ch. 2 - Miledy flies off to the north over mountains. Have her to go the east side instead.
+	public static final long Ch2MiledyScriptedMoveCoordinateOffset = 0x66BA18L;
+	public static final byte[] Ch2MiledyScriptedMoveCoordinateOld = new byte[] { (byte)0x0D, (byte)0x00, (byte)0xFF, (byte)0xFF };
+	public static final byte[] Ch2MiledyScriptedMoveCoordinateNew = new byte[] { (byte)0x12, (byte)0x00, (byte)0xFF, (byte)0xFF };
+	// Ch. 4 - Narcian flies over northern mountains. Have him just exit left.
+	public static final long Ch4NarcianScriptedMoveCoordinateOffset = 0x66C398L;
+	public static final byte[] Ch4NarcianScriptedMoveCoordinateOld = new byte[] { (byte)0x0D, (byte)0x00, (byte)0xFF, (byte)0xFF };
+	public static final byte[] Ch4NarcianScriptedMoveCoordinateNew = new byte[] { (byte)0xFF, (byte)0xFF, (byte)0x0A, (byte)0x00 };
+	// Ch. 10B - Gale and Miledy need to fly off to a different location.
+	// Gale actually moves twice. Nop out the first one and use the second one to do the actual exit.
+	// See Character Nudges for more details on the changes.
+	public static final long Ch10BGaleScriptedMove1Offset = 0x672F1CL;
+	public static final byte[] Ch10BGaleScriptedMove1Old = new byte[] { 
+			(byte)0x0F, (byte)0x00, (byte)0x00, (byte)0x00,
+			(byte)0x33, (byte)0x00, (byte)0x00, (byte)0x00,
+			(byte)0x07, (byte)0x00, (byte)0x01, (byte)0x00,
+			(byte)0x14, (byte)0x00, (byte)0x00, (byte)0x00
+	};
+	public static final byte[] Ch10BGaleScriptedMove1New = new byte[] {
+			(byte)0x02, (byte)0x00, (byte)0x00, (byte)0x00, 
+			(byte)0x08, (byte)0x00, (byte)0x00, (byte)0x00, // STAL 8
+			(byte)0x02, (byte)0x00, (byte)0x00, (byte)0x00, 
+			(byte)0x08, (byte)0x00, (byte)0x00, (byte)0x00 // STAL 8
+	};
+	// Gale actually already exits in the correct place. We just need to change Miledy's.
+	public static final long Ch10BMiledyScriptedMoveCoordinateOffset = 0x672F40L;
+	public static final byte[] Ch10BMiledyScriptedMoveCoordinateOld = new byte[] { (byte)0x0C, (byte)0x00, (byte)0xFF, (byte)0xFF };
+	public static final byte[] Ch10BMiledyScriptedMoveCoordinateNew = new byte[] { (byte)0x10, (byte)0x00, (byte)0xFF, (byte)0xFF };
+	
+	// Thea also has to move off and she happens to move off onto a cliff. Nudge her one space to the right.
+	public static final long Ch10BTheaScriptedMoveCoordinateOffset = 0x673084L;
+	public static final byte[] Ch10BTheaScriptedMoveCoordinateOld = new byte[] { (byte)0x11, (byte)0x00, (byte)0x20, (byte)0x00 };
+	public static final byte[] Ch10BTheaScriptedMoveCoordinateNew = new byte[] { (byte)0x12, (byte)0x00, (byte)0x20, (byte)0x00 };
+	
+	//Ch. 11A - Gale and Miledy fly off again, but on a different map.
+	// We've nudged their load coordinates, but their scripted move needs to be updated too.
+	public static final long Ch11AGaleScriptedMoveCoordinateOffset = 0x66E458L;
+	public static final byte[] Ch11AGaleScriptedMoveCoordinateOld = new byte[] { (byte)0x1E, (byte)0x00, (byte)0x12, (byte)0x00 };
+	public static final byte[] Ch11AGaleScriptedMoveCoordinateNew = new byte[] { (byte)0x17, (byte)0x00, (byte)0x00, (byte)0x00 };
+	
+	public static final long Ch11AMiledyScriptedMoveCoordinateOffset = 0x66E464L;
+	public static final byte[] Ch11AMiledyScriptedMoveCoordinateOld = new byte[] { (byte)0x1E, (byte)0x00, (byte)0x11, (byte)0x00 };
+	public static final byte[] Ch11AMiledyScriptedMoveCoordinateNew = new byte[] { (byte)0x17, (byte)0x00, (byte)0x00, (byte)0x00 };
+	
 	
 	// These are spaces confirmed free inside the natural ROM size (0xFFFFFF).
 	// It's somewhat limited, so let's not use these unless we absolutely have to (like for palettes).
@@ -437,6 +492,65 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			return ID;
 		}
 		
+		public String displayName() {
+			switch (this) {
+			case ROY: return "Roy";
+			case CLARINE: return "Clarine";
+			case FA: return "Fae";
+			case SHIN: return "Sin";
+			case SUE: return "Sue";
+			case DAYAN: return "Dayan";
+			case BARTH: return "Barthe";
+			case BORS: return "Bors";
+			case WENDY: return "Gwendolyn";
+			case DOUGLAS: return "Douglas";
+			case WOLT: return "Wolt";
+			case DOROTHY: return "Dorothy";
+			case KLEIN: return "Klein";
+			case SAUL: return "Saul";
+			case ELEN: return "Elen";
+			case YODEL: return "Yoder";
+			case CHAD: return "Chad";
+			case KAREL: return "Karel";
+			case FIR: return "Fir";
+			case RUTGER: return "Rutger";
+			case DIECK: return "Dieck";
+			case OUJAY: return "Ogier";
+			case GARET: return "Garret";
+			case ALAN: return "Alen";
+			case LANCE: return "Lance";
+			case PERCIVAL: return "Perceval";
+			case IGRENE: return "Igrene";
+			case MARCUS: return "Marcus";
+			case ASTOL: return "Astolfo";
+			case WARD: return "Wade";
+			case LOT: return "Lot";
+			case BARTRE: return "Bartre";
+			case LUGH: return "Lugh";
+			case LILINA: return "Lilina";
+			case HUGH: return "Hugh";
+			case NIIME: return "Niime";
+			case REI: return "Raigh";
+			case LALAM: return "Larum";
+			case YUNNO: return "Juno";
+			case THITO: return "Thea";
+			case THANY: return "Shanna";
+			case ZEISS: return "Zeiss";
+			case ELFIN: return "Elffin";
+			case CASS: return "Cath";
+			case SOPHIA: return "Sophia";
+			case MILEDY: return "Melady";
+			case GONZALES: return "Gonzalez";
+			case NOAH: return "Noah";
+			case TRECK: return "Trec";
+			case ZEALOT: return "Zelot";
+			case ECHIDNA: return "Echidna";
+			case CECILIA: return "Cecilia";
+			case GEESE: return "Geese";
+			default: return toString();
+			}
+		}
+		
 		public static Comparator<Character> characterIDComparator() {
 			return new Comparator<Character>() { public int compare(Character o1, Character o2) { return Integer.compare(o1.ID, o2.ID); } };
 		}
@@ -627,6 +741,129 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			return ID;
 		}
 		
+		public String displayName() {
+			switch (this) {
+			case LORD: return "Lord";
+			case MERCENARY: return "Mercenary";
+			case MYRMIDON: return "Myrmidon";
+			case FIGHTER: return "Fighter";
+			case KNIGHT: return "Knight";
+			case ARCHER: return "Archer";
+			case PRIEST: return "Priest";
+			case MAGE: return "Mage";
+			case SHAMAN: return "Shaman";
+			case CAVALIER: return "Cavalier";
+			case NOMAD: return "Nomad";
+			case WYVERN_RIDER: return "Wyvern Rider";
+			case SOLDIER: return "Soldier";
+			case BRIGAND: return "Brigand";
+			case PIRATE: return "Pirate";
+			case THIEF: return "Thief";
+			case BARD: return "Bard";
+			case HERO: return "Hero";
+			case SWORDMASTER: return "Swordmaster";
+			case WARRIOR: return "Warrior";
+			case GENERAL: return "General";
+			case SNIPER: return "Sniper"; 
+			case BISHOP: return "Bishop";
+			case SAGE: return "Sage";
+			case DRUID: return "Druid";
+			case PALADIN: return "Paladin";
+			case NOMAD_TROOPER: return "Nomad Trooper";
+			case WYVERN_LORD: return "Wyvern Lord";
+			case BERSERKER: return "Berserker";
+			case MASTER_LORD: return "Master Lord"; 
+			case MYRMIDON_F: return "Myrmidon (F)";
+			case KNIGHT_F: return "Knight (F)";
+			case ARCHER_F: return "Archer (F)";
+			case CLERIC: return "Cleric";
+			case MAGE_F: return "Mage (F)";
+			case SHAMAN_F: return "Shaman (F)";
+			case TROUBADOUR: return "Troubadour";
+			case NOMAD_F: return "Nomad (F)";
+			case PEGASUS_KNIGHT: return "Pegasus Knight";
+			case WYVERN_RIDER_F: return "Wyvern Rider (F)";
+			case THIEF_F: return "Thief (F)";
+			case DANCER: return "Dancer";
+			case HERO_F: return "Hero (F)";
+			case SWORDMASTER_F: return "Swordmaster (F)";
+			case GENERAL_F: return "General (F)";
+			case SNIPER_F: return "Sniper (F)";
+			case BISHOP_F: return "Bishop (F)";
+			case SAGE_F: return "Sage (F)";
+			case DRUID_F: return "Druid (F)";
+			case VALKYRIE: return "Valkyrie";
+			case NOMAD_TROOPER_F: return "Nomad Trooper (F)";
+			case FALCON_KNIGHT: return "Falcon Knight";
+			case WYVERN_LORD_F: return "Wyvern Lord (F)";
+			default: return toString();
+			}
+		}
+		
+		public Set<GBAFEClass> similarClasses() {
+			switch (this) {
+			case MYRMIDON:
+			case MYRMIDON_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(MYRMIDON, MYRMIDON_F));
+			case KNIGHT:
+			case KNIGHT_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(KNIGHT, KNIGHT_F));
+			case ARCHER:
+			case ARCHER_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(ARCHER, ARCHER_F));
+			case PRIEST:
+			case CLERIC:
+				return new HashSet<GBAFEClass>(Arrays.asList(PRIEST, CLERIC));
+			case MAGE:
+			case MAGE_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(MAGE, MAGE_F));
+			case SHAMAN:
+			case SHAMAN_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(SHAMAN, SHAMAN_F));
+			case NOMAD:
+			case NOMAD_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(NOMAD, NOMAD_F));
+			case WYVERN_RIDER:
+			case WYVERN_RIDER_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(WYVERN_RIDER, WYVERN_RIDER_F));
+			case BRIGAND:
+			case PIRATE:
+				return new HashSet<GBAFEClass>(Arrays.asList(BRIGAND, PIRATE));
+			case BARD:
+			case DANCER:
+				return new HashSet<GBAFEClass>(Arrays.asList(BARD, DANCER));
+			case HERO:
+			case HERO_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(HERO, HERO_F));
+			case SWORDMASTER:
+			case SWORDMASTER_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(SWORDMASTER, SWORDMASTER_F));
+			case GENERAL:
+			case GENERAL_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(GENERAL, GENERAL_F));
+			case SNIPER:
+			case SNIPER_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(SNIPER, SNIPER_F));
+			case BISHOP:
+			case BISHOP_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(BISHOP, BISHOP_F));
+			case SAGE:
+			case SAGE_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(SAGE, SAGE_F));
+			case DRUID:
+			case DRUID_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(DRUID, DRUID_F));
+			case NOMAD_TROOPER:
+			case NOMAD_TROOPER_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(NOMAD_TROOPER, NOMAD_TROOPER_F));
+			case WYVERN_LORD:
+			case WYVERN_LORD_F:
+				return new HashSet<GBAFEClass>(Arrays.asList(WYVERN_LORD, WYVERN_LORD_F));
+			default:
+				return new HashSet<GBAFEClass>(Arrays.asList(this));
+			}
+		}
+		
 		public static Set<CharacterClass> allMaleClasses = new HashSet<CharacterClass>(Arrays.asList(LORD, MERCENARY, MYRMIDON, FIGHTER, KNIGHT, ARCHER, PRIEST, MAGE, SHAMAN, 
 				CAVALIER, NOMAD, WYVERN_RIDER, SOLDIER, BRIGAND, PIRATE, THIEF, BARD, HERO, SWORDMASTER, WARRIOR, GENERAL, SNIPER, BISHOP, SAGE, DRUID, PALADIN, NOMAD_TROOPER, WYVERN_LORD,
 				BERSERKER, /*MANAKETE,*/ MASTER_LORD));
@@ -654,7 +891,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		
 		public static Set<CharacterClass> allPlayerOnlyClasses = new HashSet<CharacterClass>(Arrays.asList(BARD, DANCER));
 		
-		public static Set<CharacterClass> flyingClasses = new HashSet<CharacterClass>(Arrays.asList(WYVERN_LORD, WYVERN_LORD_F, WYVERN_RIDER, WYVERN_RIDER_F, PEGASUS_KNIGHT));
+		public static Set<CharacterClass> flyingClasses = new HashSet<CharacterClass>(Arrays.asList(WYVERN_LORD, WYVERN_LORD_F, WYVERN_RIDER, WYVERN_RIDER_F, PEGASUS_KNIGHT, FALCON_KNIGHT));
 		
 		// Includes most sword locks. Yes, they gain range with magic swords, but we're not going to assume they can use magic swords.
 		public static Set<CharacterClass> meleeOnlyClasses = new HashSet<CharacterClass>(Arrays.asList(LORD, MERCENARY, MYRMIDON, SWORDMASTER, MASTER_LORD, MYRMIDON_F, THIEF, THIEF_F, SWORDMASTER_F, MANAKETE_F));
@@ -767,8 +1004,8 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			return classList;
 		}
 		
-		public static Set<CharacterClass> targetClassesForRandomization(CharacterClass sourceClass, boolean isForEnemy, Boolean excludeSource, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean requireAttack, Boolean requiresRange, Boolean applyRestrictions, Boolean restrictGender) {
-			Set<CharacterClass> limited = limitedClassesForRandomization(sourceClass);
+		public static Set<CharacterClass> targetClassesForRandomization(CharacterClass sourceClass, boolean isBoss, boolean isForMinion, Boolean excludeSource, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean requireAttack, Boolean requiresRange, Boolean applyRestrictions, Boolean restrictGender) {
+			Set<CharacterClass> limited = limitedClassesForRandomization(sourceClass, isForMinion);
 			if (limited != null && applyRestrictions) {
 				return limited;
 			}
@@ -810,7 +1047,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 				classList.removeAll(allMeleeLockedClasses);
 			}
 			
-			if (isForEnemy) {
+			if (isBoss || isForMinion) {
 				classList.removeAll(allPlayerOnlyClasses);
 			}
 			
@@ -827,7 +1064,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			return classList;
 		}
 		
-		private static Set<CharacterClass> limitedClassesForRandomization(CharacterClass sourceClass) {
+		private static Set<CharacterClass> limitedClassesForRandomization(CharacterClass sourceClass, boolean isForMinion) {
 			switch(sourceClass) {
 			case LORD: // Special case for Roy to be able to always use swords (and have promotions)
 				return new HashSet<CharacterClass>(Arrays.asList(LORD, MYRMIDON, MERCENARY, MYRMIDON_F, CAVALIER, PEGASUS_KNIGHT, NOMAD));
@@ -836,11 +1073,19 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			case WYVERN_RIDER:
 			case WYVERN_RIDER_F:
 			case PEGASUS_KNIGHT:
-				return new HashSet<CharacterClass>(Arrays.asList(WYVERN_RIDER, WYVERN_RIDER_F, PEGASUS_KNIGHT));
+				if (isForMinion) {
+					return new HashSet<CharacterClass>(Arrays.asList(WYVERN_RIDER, WYVERN_RIDER_F, PEGASUS_KNIGHT));
+				} else {
+					return null;
+				}
 			case WYVERN_LORD:
 			case WYVERN_LORD_F:
 			case FALCON_KNIGHT:
-				return new HashSet<CharacterClass>(Arrays.asList(WYVERN_LORD, WYVERN_LORD_F, FALCON_KNIGHT));
+				if (isForMinion) {
+					return new HashSet<CharacterClass>(Arrays.asList(WYVERN_LORD, WYVERN_LORD_F, FALCON_KNIGHT));
+				} else {
+					return null;
+				}
 			case PIRATE:
 				return new HashSet<CharacterClass>(Arrays.asList(PIRATE, WYVERN_RIDER, WYVERN_RIDER_F, PEGASUS_KNIGHT));
 			case BRIGAND:
@@ -875,6 +1120,10 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		public Boolean canAttack() {
 			return !CharacterClass.allPacifistClasses.contains(this);
 		}
+		
+		public boolean isFlier() {
+			return CharacterClass.flyingClasses.contains(this);
+		}
 	}
 	
 	public enum Item implements GBAFEItem {
@@ -903,9 +1152,11 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		HEAL(0x43), MEND(0x44), RECOVER(0x45), PHYSIC(0x46), FORTIFY(0x47), WARP(0x48), RESCUE(0x49), RESTORE(0x4A), SILENCE(0x4B), SLEEP(0x4C),
 		TORCH_STAFF(0x4D), HAMMERNE(0x4E), BERSERK(0x50), UNLOCK(0x51), BARRIER(0x52), TINA_STAFF(0x76), HOLY_MAIDEN(0x77),
 		
-		UNUSED_WATCH_STAFF(0x4F), // Will be used for lord weapon, if necessary.
+		UNUSED_WATCH_STAFF(0x4F), // Spell Animation won't work sometimes
+		UNUSED_DEMON_STONE(0x55), // Will be used for lord weapon, if necessary. Stealable by default, so we have to update the steal AI table.
+		UNUSED_BRIDGE_KEY(0x66), // Spell Animation won't work
 		
-		FIRE_DRAGON_STONE(0x53), DIVINE_DRAGON_STONE(0x54), MAGIC_DRAGON_STONE(0x55),
+		FIRE_DRAGON_STONE(0x53), DIVINE_DRAGON_STONE(0x54), /*MAGIC_DRAGON_STONE(0x55),*/
 		
 		SECRET_BOOK(0x56), GODDESS_ICON(0x57), ANGELIC_ROBE(0x58), DRAGON_SHIELD(0x59), ENERGY_RING(0x5A), SPEEDWING(0x5B), TALISMAN(0x5C), BOOTS(0x5D), BODY_RING(0x5E),
 		
@@ -1071,6 +1322,29 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 					return WeaponType.STAFF;
 				default:
 					return WeaponType.NOT_A_WEAPON;
+				}
+			}
+			
+			public static FE6WeaponType fromGeneralType(WeaponType generalType) {
+				switch (generalType) {
+				case SWORD:
+					return FE6WeaponType.SWORD;
+				case LANCE:
+					return FE6WeaponType.LANCE;
+				case AXE:
+					return FE6WeaponType.AXE;
+				case BOW:
+					return FE6WeaponType.BOW;
+				case ANIMA:
+					return FE6WeaponType.ANIMA;
+				case LIGHT:
+					return FE6WeaponType.LIGHT;
+				case DARK:
+					return FE6WeaponType.DARK;
+				case STAFF:
+					return FE6WeaponType.STAFF;
+				default:
+					return null;
 				}
 			}
 		}
@@ -1347,7 +1621,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		
 		public static Set<Item> allRestrictedWeapons = new HashSet<Item>(Arrays.asList(WO_DAO));
 		
-		public static Set<Item> allBasicWeapons = new HashSet<Item>(Arrays.asList(IRON_SWORD, IRON_LANCE, IRON_AXE, IRON_BOW, FIRE, LIGHTNING, FLUX));
+		public static Set<Item> allBasicWeapons = new HashSet<Item>(Arrays.asList(IRON_SWORD, IRON_LANCE, IRON_AXE, IRON_BOW, FIRE, LIGHTNING, FLUX, HEAL));
 		public static Set<Item> allSteelWeapons = new HashSet<Item>(Arrays.asList(STEEL_SWORD, STEEL_LANCE, STEEL_AXE, STEEL_BOW, THUNDER));
 		public static Set<Item> allBasicThrownWeapons = new HashSet<Item>(Arrays.asList(JAVELIN, HAND_AXE));
 		
@@ -1858,15 +2132,59 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			return new Character[] {};
 		}
 		
+		// This only accounts for character loading position nudges.
+		// Scripting movement needs to be handled separately.
 		public CharacterNudge[] nudgesRequired() {
 			switch(this) {
+			case CHAPTER_2:
+				// Shanna VERY briefly spawns over mountains.
+				return new CharacterNudge[] {
+					new CharacterNudge(Character.THANY.ID, CharacterNudge.Condition.ONLY_IF_NOT_FLIER, 
+							16, 18, 14, 17,
+							15, 18, 14, 17
+							)
+				};
 			case CHAPTER_6:
-				return new CharacterNudge[] {new CharacterNudge(Character.CASS.ID, 17, 23, 16, 23) }; // Cath spwans in a wall for some reason in vanilla. Move her out of the wall so she doesn't softlock the game.
+				// Cath briefly spawns in a wall.
+				return new CharacterNudge[] {
+					new CharacterNudge(Character.CASS.ID, CharacterNudge.Condition.ALWAYS, 
+							17, 23, 17, 23,
+							16, 23, 16, 23)
+				};
+			case CHAPTER_11A:
+				// Gale and Miledy talk on mountains. Ideally we'd only do this if Miledy wasn't flying, but
+				// it would be complicated to add a check for a different character in the nudge.
+				return new CharacterNudge[] {
+					new CharacterNudge(Character.GALE.ID, CharacterNudge.Condition.ALWAYS,
+							29, 14, 27, 13,
+							29, 5, 29, 5
+							),
+					new CharacterNudge(Character.MILEDY.ID, CharacterNudge.Condition.ALWAYS,
+							29, 8, 27, 12,
+							29, 4, 29, 4
+							)
+				};
 			case CHAPTER_10B:
-				return new CharacterNudge[] { // Thito (Thea) spawns on a mountain
-						new CharacterNudge(Character.THITO.ID, 12, 0, 16, 0), // Starting position 
-						new CharacterNudge(Character.THITO.ID, 12, 1, 16, 1)  // Post move position
-						}; 
+				// Miledy flies to Gale, who is over a mountain, to talk. (This requires scripting change too.)
+				// Additionally, Thea briefly spawns over a cliff.
+				return new CharacterNudge[] {
+					new CharacterNudge(Character.GALE.ID, CharacterNudge.Condition.ALWAYS,
+							6, 0, 6, 0,
+							22, 7, 22, 7
+							),
+					new CharacterNudge(Character.MILEDY.ID, CharacterNudge.Condition.ALWAYS,
+							20, 2, 6, 1,
+							20, 2, 22, 6
+							),
+					new CharacterNudge(Character.THITO.ID, CharacterNudge.Condition.ONLY_IF_NOT_FLIER,
+							17, 31, 20, 30,
+							18, 31, 20, 30
+							),
+					new CharacterNudge(Character.THITO.ID, CharacterNudge.Condition.ONLY_IF_NOT_FLIER,
+							12, 0, 12, 1,
+							16, 0, 16, 3
+							)
+				}; 
 			default:
 				return new CharacterNudge[] {};
 			}
@@ -2022,15 +2340,45 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		
 		public Set<GBAFEShop> groupedShops() {
 			switch(this) {
+			case CHAPTER_2_VENDOR:
+			case CHAPTER_2_ARMORY:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_2_VENDOR, CHAPTER_2_ARMORY));
+			case CHAPTER_4_ARMORY:
+			case CHAPTER_4_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_4_VENDOR, CHAPTER_4_ARMORY));
 			case CHAPTER_7_ARMORY_1:
 			case CHAPTER_7_ARMORY_2:
 				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_7_ARMORY_1, CHAPTER_7_ARMORY_2));
+			case CHAPTER_9_ARMORY:
+			case CHAPTER_9_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_9_ARMORY, CHAPTER_9_VENDOR));
+			case CHAPTER_11A_ARMORY:
+			case CHAPTER_11A_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_11A_ARMORY, CHAPTER_11A_VENDOR));
+			case CHAPTER_13_ARMORY:
+			case CHAPTER_13_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_13_ARMORY, CHAPTER_13_VENDOR));
+			case CHAPTER_14_ARMORY:
+			case CHAPTER_14_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_14_ARMORY, CHAPTER_14_VENDOR));
+			case CHAPTER_18B_ARMORY:
+			case CHAPTER_18B_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_18B_ARMORY, CHAPTER_18B_VENDOR));
+			case CHAPTER_19B_ARMORY:
+			case CHAPTER_19B_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_19B_ARMORY, CHAPTER_19B_VENDOR));
+			case CHAPTER_20A_ARMORY:
+			case CHAPTER_20A_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_20A_ARMORY, CHAPTER_20A_VENDOR));
+			case CHAPTER_21_ARMORY:
+			case CHAPTER_21_SECRET:
+			case CHAPTER_21_VENDOR:
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_21_ARMORY, CHAPTER_21_SECRET, CHAPTER_21_VENDOR));
 			case CHAPTER_23_ARMORY_1:
 			case CHAPTER_23_ARMORY_2:
-				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_23_ARMORY_1, CHAPTER_23_ARMORY_2));
 			case CHAPTER_23_VENDOR_1:
 			case CHAPTER_23_VENDOR_2:
-				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_23_VENDOR_1, CHAPTER_23_VENDOR_2));
+				return new HashSet<GBAFEShop>(Arrays.asList(CHAPTER_23_VENDOR_1, CHAPTER_23_VENDOR_2, CHAPTER_23_ARMORY_1, CHAPTER_23_ARMORY_2));
 			default:
 				return new HashSet<GBAFEShop>(Arrays.asList(this));
 			}
@@ -2558,6 +2906,12 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 	public Set<GBAFECharacter> allPlayableCharacters() {
 		return new HashSet<GBAFECharacter>(Character.allPlayableCharacters);
 	}
+	
+	public Set<GBAFECharacter> allCanonicalPlayableCharacters() {
+		return new HashSet<GBAFECharacter>(allPlayableCharacters().stream().filter(character -> {
+			return Character.canonicalIDForCharacterID(character.getID()) == character.getID();
+		}).toList());
+	}
 
 	public Set<GBAFECharacter> allBossCharacters() {
 		return new HashSet<GBAFECharacter>(Character.allBossCharacters);
@@ -2655,6 +3009,10 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 	
 	public boolean isValidCharacter(GBAFECharacter character) {
 		return character != Character.NONE;
+	}
+	
+	public boolean canModifyCharacter(GBAFECharacter character) {
+		return character.canChange();
 	}
 	
 	public GBAFECharacter nullCharacter() {
@@ -2775,6 +3133,10 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		Set<GBAFEClass> classes = new HashSet<GBAFEClass>(CharacterClass.allPlayerOnlyClasses);
 		return classes;
 	}
+	
+	public Set<GBAFEClass> disabledByDefaultClasses() {
+		return new HashSet<GBAFEClass>();
+	}
 
 	public GBAFEClass classWithID(int classID) {
 		return CharacterClass.valueOf(classID);
@@ -2788,6 +3150,10 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		}
 		
 		return false;
+	}
+	
+	public boolean isClassPromoted(GBAFEClass charClass) {
+		return CharacterClass.allPromotedClasses.contains(charClass);
 	}
 	
 	public boolean canClassPromote(GBAFEClass charClass) {
@@ -2831,7 +3197,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 				CharacterClass.valueOf(winningClass.getID()), excludeLords, excludeThieves));
 	}
 
-	public Set<GBAFEClass> targetClassesForRandomization(GBAFEClass sourceClass, boolean isForEnemy, Map<String, Boolean> options) {
+	public Set<GBAFEClass> targetClassesForRandomization(GBAFEClass sourceClass, boolean isBoss, boolean isForMinion, Map<String, Boolean> options) {
 		Boolean excludeLords = options.get(GBAFEClassProvider.optionKeyExcludeLords);
 		if (excludeLords == null) { excludeLords = false; }
 		Boolean excludeThieves = options.get(GBAFEClassProvider.optionKeyExcludeThieves);
@@ -2849,7 +3215,7 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		Boolean restrictGender = options.get(GBAFEClassProvider.optionKeyRestrictGender);
 		if (restrictGender == null) { restrictGender = false; }
 		
-		return new HashSet<GBAFEClass>(CharacterClass.targetClassesForRandomization(CharacterClass.valueOf(sourceClass.getID()), isForEnemy,
+		return new HashSet<GBAFEClass>(CharacterClass.targetClassesForRandomization(CharacterClass.valueOf(sourceClass.getID()), isBoss, isForMinion,
 				excludeSource, excludeLords, excludeThieves, excludeSpecial, requireAttack, requiresRange, applyRestrictions, restrictGender));
 	}
 	
@@ -3336,6 +3702,14 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 		return new HashSet<GBAFEItem>(Item.playerOnlySet);
 	}
 	
+	public Set<Integer> restrictedClassIDsForWeapon(GBAFEItem weapon) {
+		if (weapon == Item.WO_DAO) {
+			return new HashSet<Integer>(Arrays.asList(CharacterClass.MYRMIDON.ID, CharacterClass.MYRMIDON_F.ID, CharacterClass.SWORDMASTER.ID, CharacterClass.SWORDMASTER_F.ID));
+		}
+		
+		return new HashSet<Integer>();
+	}
+	
 	public Set<GBAFEItem> promoWeapons() {
 		return new HashSet<GBAFEItem>(Item.promoSet);
 	}
@@ -3467,6 +3841,18 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 			item.initializeDisplayString("Unregistered [0x" + Integer.toHexString(item.getID()) + "]");
 		}
 		return item;
+	}
+	
+	public GBAFEItemData duplicateItem(GBAFEItemData originalData, int newID) {
+		if (originalData.getClass() == FE6Item.class) {
+			FE6Item duplicated = new FE6Item(originalData.getData(), -1);
+			duplicated.setID(newID);
+			duplicated.initializeDisplayString("[DUPLICATED] " + Item.valueOf(duplicated.getID()).toString());
+			return duplicated;
+		} else {
+			System.err.println("Attempted to duplicate FE6Item with a non-FE6 Item.");
+			return null;
+		}
 	}
 
 	public List<GBAFEClass> knightCavEffectivenessClasses() {
@@ -3721,4 +4107,8 @@ public class FE6Data implements GBAFECharacterProvider, GBAFEClassProvider, GBAF
 	}
 	
 	public Boolean isMapShop(GBAFEShop shop) { return false; }
+
+	public Set<GBAFEClass> similarClassesTo(GBAFEClass charClass) {
+		return ((CharacterClass)charClass).similarClasses();
+	}
 }

@@ -1,5 +1,6 @@
 package fedata.gba.general;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,11 +29,14 @@ public interface GBAFEClassProvider {
 	public Set<GBAFEClass> meleeSupportedClasses();
 	public Set<GBAFEClass> rangeSupportedClasses();
 	public Set<GBAFEClass> playerOnlyClasses();
+	public Set<GBAFEClass> disabledByDefaultClasses();
 	
 	public GBAFEClass classWithID(int classID);
 	
 	public boolean canClassDemote(GBAFEClass charClass);
 	public boolean canClassPromote(GBAFEClass charClass);
+	
+	public boolean isClassPromoted(GBAFEClass charClass);
 	
 	public GBAFEClass[] promotedClass(GBAFEClass baseClass);
 	public GBAFEClass[] demotedClass(GBAFEClass promotedClass);
@@ -45,11 +49,13 @@ public interface GBAFEClassProvider {
 	public boolean isFlier(GBAFEClass charClass);
 	
 	public Set<GBAFEClass> classesThatLoseToClass(GBAFEClass sourceClass, GBAFEClass winningClass, Map<String, Boolean> options);
-	public Set<GBAFEClass> targetClassesForRandomization(GBAFEClass sourceClass, boolean isForEnemy, Map<String, Boolean> options);
+	public Set<GBAFEClass> targetClassesForRandomization(GBAFEClass sourceClass, boolean isBoss, boolean isForMinion, Map<String, Boolean> options);
 	
 	public GBAFEClass correspondingMaleClass(GBAFEClass charClass);
 	public GBAFEClass correspondingFemaleClass(GBAFEClass charClass);
 	public void prepareForClassRandomization(Map<Integer, GBAFEClassData> classMap);
+	
+	public Set<GBAFEClass> similarClassesTo(GBAFEClass charClass);
 	
 	public GBAFEClassData classDataWithData(byte[] data, long offset, GBAFEClassData demotedClass); // demotedClass is really only necessary for FE6.
 }

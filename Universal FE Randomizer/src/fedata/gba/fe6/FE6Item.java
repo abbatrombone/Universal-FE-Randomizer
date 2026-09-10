@@ -59,22 +59,51 @@ public class FE6Item implements GBAFEItemData {
 	public int getNameIndex() {
 		return (data[0] & 0xFF) | ((data[1] << 8) & 0xFF00);
 	}
+	
+	public void setNameIndex(int newNameIndex) {
+		data[0] = (byte)(newNameIndex & 0xFF);
+		data[1] = (byte)((newNameIndex >> 8) & 0xFF);
+		wasModified = true;
+	}
 
 	public int getDescriptionIndex() {
 		return (data[2] & 0xFF) | ((data[3] << 8) & 0xFF00);
+	}
+	
+	public void setDescriptionIndex(int newDescriptionIndex) {
+		data[2] = (byte)(newDescriptionIndex & 0xFF);
+		data[3] = (byte)((newDescriptionIndex >> 8) & 0xFF);
+		wasModified = true;
 	}
 
 	public int getUseDescriptionIndex() {
 		return (data[4] & 0xFF) | ((data[5] << 8) & 0xFF00);
 	}
+	
+	public void setUseDescriptionIndex(int newUseIndex) {
+		data[4] = (byte)(newUseIndex & 0xFF);
+		data[5] = (byte)((newUseIndex >> 8) & 0xFF);
+		wasModified = true;
+	}
 
 	public int getID() {
 		return data[6] & 0xFF;
+	}
+	
+	public void setID(int newID) {
+		data[6] = (byte)(newID & 0xFF);
+		wasModified = true;
 	}
 
 	public WeaponType getType() {
 		FE6WeaponType type = FE6WeaponType.valueOf(data[7] & 0xFF);
 		return type.toGeneralType();
+	}
+	
+	public void setType(WeaponType type) {
+		FE6WeaponType fe6Type = FE6WeaponType.fromGeneralType(type);
+		data[7] = (byte)(fe6Type.ID & 0xFF);
+		wasModified = true;
 	}
 	
 	public boolean hasAbility1() {
@@ -87,6 +116,11 @@ public class FE6Item implements GBAFEItemData {
 	
 	public String getAbility1Description(String delimiter) {
 		return FE6Data.Item.Ability1Mask.stringOfActiveAbilities(getAbility1(), delimiter);
+	}
+	
+	public void setAbility1(int ability) {
+		data[8] = (byte)(ability & 0xFF);
+		wasModified = true;
 	}
 	
 	public boolean hasAbility2() {
@@ -134,6 +168,10 @@ public class FE6Item implements GBAFEItemData {
 		return "N/A";
 	}
 	
+	public void setAbility4(int ability) {
+		// Unused.
+	}
+	
 	public boolean hasAbilityOrEffect(String abilityEffectString) {
 		FE6Data.Item.Ability1Mask ability1Mask = FE6Data.Item.Ability1Mask.maskForDisplayString(abilityEffectString);
 		if (ability1Mask != null) {
@@ -149,6 +187,15 @@ public class FE6Item implements GBAFEItemData {
 		}
 		
 		return false;
+	}
+	
+	public int getIconIndex() {
+		return (data[29] & 0xFF);
+	}
+	
+	public void setIconIndex(int newIcon) {
+		data[29] = (byte)(newIcon & 0xFF);
+		wasModified = true;
 	}
 
 	public long getStatBonusPointer() {
@@ -281,13 +328,13 @@ public class FE6Item implements GBAFEItemData {
 		data[23] = (byte)(weight & 0xFF);
 		wasModified = true;
 	}
-	private void setCritical(int critical) {
+	public void setCritical(int critical) {
 		critical = WhyDoesJavaNotHaveThese.clamp(critical, 0, 255);
 		data[24] = (byte)(critical & 0xFF);
 		wasModified = true;
 	}
 	
-	private void setMinRange(int minRange) {
+	public void setMinRange(int minRange) {
 		int maxRange = getMaxRange();
 		minRange = WhyDoesJavaNotHaveThese.clamp(minRange, 1, maxRange);
 		
@@ -295,7 +342,7 @@ public class FE6Item implements GBAFEItemData {
 		wasModified = true;
 	}
 	
-	private void setMaxRange(int maxRange) {
+	public void setMaxRange(int maxRange) {
 		int minRange = getMinRange();
 		maxRange = WhyDoesJavaNotHaveThese.clamp(maxRange, minRange, 3);
 		
@@ -573,7 +620,7 @@ public class FE6Item implements GBAFEItemData {
 
 	@Override
 	public void turnIntoLordWeapon(int lordID, int nameIndex, int descriptionIndex, WeaponType weaponType,
-			boolean isUnbreakable, int targetWeaponWeight, GBAFEItemData referenceItem, ItemDataLoader itemData, FreeSpaceManager freeSpace) {
+			boolean isUnbreakable, boolean isEffective, int targetWeaponWeight, GBAFEItemData referenceItem, ItemDataLoader itemData, FreeSpaceManager freeSpace) {
 		
 		// Update name and description pointers.
 		byte[] nameData = WhyDoesJavaNotHaveThese.byteArrayFromLongValue(nameIndex, true, 2);
@@ -613,22 +660,26 @@ public class FE6Item implements GBAFEItemData {
 		// Null out stat bonuses.
 		setStatBonusPointer(0);
 		// Effectiveness. It should be effective against Knights and Cavs. If it's a bow, it also needs fliers.
-		long knightCavClassOffsets = itemData.offsetForAdditionalData(AdditionalData.KNIGHTCAV_EFFECT);
-		if (weaponType == WeaponType.BOW) {
-			byte[] flierClassIDs = itemData.bytesForAdditionalData(AdditionalData.FLIERS_EFFECT);
-			byte[] knightCavClassIDs = itemData.bytesForAdditionalData(AdditionalData.KNIGHTCAV_EFFECT);
-			ByteArrayBuilder newClassIDs = new ByteArrayBuilder();
-			newClassIDs.appendBytes(knightCavClassIDs);
-			if (newClassIDs.getLastByteWritten() == 0) {
-				newClassIDs.deleteLastByte();
+		if (isEffective) {
+			long knightCavClassOffsets = itemData.offsetForAdditionalData(AdditionalData.KNIGHTCAV_EFFECT);
+			if (weaponType == WeaponType.BOW) {
+				byte[] flierClassIDs = itemData.bytesForAdditionalData(AdditionalData.FLIERS_EFFECT);
+				byte[] knightCavClassIDs = itemData.bytesForAdditionalData(AdditionalData.KNIGHTCAV_EFFECT);
+				ByteArrayBuilder newClassIDs = new ByteArrayBuilder();
+				newClassIDs.appendBytes(knightCavClassIDs);
+				if (newClassIDs.getLastByteWritten() == 0) {
+					newClassIDs.deleteLastByte();
+				}
+				newClassIDs.appendBytes(flierClassIDs);
+				if (newClassIDs.getLastByteWritten() != 0) {
+					newClassIDs.appendByte((byte)0);
+				}
+				setEffectivenessPointer(freeSpace.setValue(newClassIDs.toByteArray(), "Knights, Cavs, and Flier Effectiveness"));
+			} else {
+				setEffectivenessPointer(knightCavClassOffsets);
 			}
-			newClassIDs.appendBytes(flierClassIDs);
-			if (newClassIDs.getLastByteWritten() != 0) {
-				newClassIDs.appendByte((byte)0);
-			}
-			setEffectivenessPointer(freeSpace.setValue(newClassIDs.toByteArray(), "Knights, Cavs, and Flier Effectiveness"));
 		} else {
-			setEffectivenessPointer(knightCavClassOffsets);
+			setEffectivenessPointer(0);
 		}
 		
 		setDurability(referenceItem.getDurability());
@@ -651,7 +702,7 @@ public class FE6Item implements GBAFEItemData {
 
 	@Override
 	public GBAFEItemData createLordWeapon(int lordID, int newItemID, int nameIndex, int descriptionIndex, WeaponType weaponType,
-			boolean isUnbreakable, int targetWeaponWeight, int iconIndex, ItemDataLoader itemData, FreeSpaceManager freeSpace) {
+			boolean isUnbreakable, boolean isEffective, int targetWeaponWeight, int iconIndex, ItemDataLoader itemData, FreeSpaceManager freeSpace) {
 		// This isn't really used for FE6, but if we need it in the future, we can implement it then.
 		assert false;
 		return null;

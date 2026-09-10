@@ -2,7 +2,7 @@ package ui.tabs.gba;
 
 import fedata.general.FEBase.GameType;
 import org.eclipse.swt.custom.CTabFolder;
-import ui.common.YuneTabItem;
+import ui.common.YuneTabGridItem;
 import ui.views.BasesView;
 import ui.views.EnemyBuffsView;
 import ui.views.GrowthsView;
@@ -21,12 +21,11 @@ import util.OptionRecorder.GBAOptionBundle;
  *     <li>Enemy Buffs</li>
  * </ul>
  */
-public class GBAStatsTab extends YuneTabItem {
+public class GBAStatsTab extends YuneTabGridItem {
 
     private GrowthsView growths;
     private BasesView bases;
     private MOVCONAffinityView movConAffinity;
-    private EnemyBuffsView enemies;
 
     public GBAStatsTab(CTabFolder parent, GameType type) {
         super(parent, type);
@@ -35,15 +34,13 @@ public class GBAStatsTab extends YuneTabItem {
     @Override
     protected void compose() {
         growths = addView(new GrowthsView(container, type.hasSTRMAGSplit(), true));
-        enemies = addView(new EnemyBuffsView(container));
-        setViewData(enemies, 1, 2);
+        bases = addView(new BasesView(container, type));
         movConAffinity = addView(new MOVCONAffinityView(container));
         setViewData(movConAffinity, 1, 2);
-        bases = addView(new BasesView(container, type));
     }
 
     @Override
-    protected String getTabName(){
+    public String getTabName(){
         return "Stats";
     }
 
@@ -62,7 +59,6 @@ public class GBAStatsTab extends YuneTabItem {
         growths.initialize(bundle.growths);
         bases.initialize(bundle.bases);
         movConAffinity.initialize(bundle.other);
-        enemies.initialize(bundle.enemies);
     }
 
     @Override
@@ -70,6 +66,5 @@ public class GBAStatsTab extends YuneTabItem {
         bundle.growths = growths.getOptions();
         bundle.bases = bases.getOptions();
         bundle.other = movConAffinity.getOptions();
-        bundle.enemies = enemies.getOptions();
     }
 }

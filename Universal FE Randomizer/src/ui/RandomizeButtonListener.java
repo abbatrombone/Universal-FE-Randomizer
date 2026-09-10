@@ -97,7 +97,7 @@ public class RandomizeButtonListener implements Listener {
             GBAOptionBundle bundle = (GBAOptionBundle) baseBundle;
             // Update the Bundle in the Option Recorder
             OptionRecorder.recordGBAFEOptions(bundle, type);
-            randomizer = new GBARandomizer(sourceFile, writePath, type, compiler, bundle.growths, bundle.bases, bundle.classes, bundle.weapons, bundle.other, bundle.enemies, bundle.otherOptions, bundle.recruitmentOptions, bundle.itemAssignmentOptions, bundle.characterShufflingOptions, bundle.statboosterOptions, bundle.rewards, bundle.prfs, bundle.shopOptions, bundle.seed);
+            randomizer = new GBARandomizer(sourceFile, writePath, type, compiler, bundle.growths, bundle.bases, bundle.classes, bundle.enemyClasses, bundle.weapons, bundle.other, bundle.enemies, bundle.otherOptions, bundle.recruitmentOptions, bundle.itemAssignmentOptions, bundle.characterShufflingOptions, bundle.statboosterOptions, bundle.rewards, bundle.prfs, bundle.shopOptions, bundle.seed);
         } else if (type.isSFC()) {
             // Update the Bundle in the Option Recorder
             FE4OptionBundle bundle = (FE4OptionBundle) baseBundle;
@@ -108,7 +108,7 @@ public class RandomizeButtonListener implements Listener {
             // Update the Bundle in the Option Recorder
             FE9OptionBundle bundle = (FE9OptionBundle) baseBundle;
             OptionRecorder.recordFE9Options(bundle);
-            randomizer = new FE9Randomizer(sourceFile, writePath, bundle.growths, bundle.bases, bundle.skills, bundle.otherOptions, bundle.enemyBuff, bundle.classes, bundle.weapons, bundle.mechanics, bundle.rewards, bundle.seed);
+            randomizer = new FE9Randomizer(sourceFile, writePath, bundle.growths, bundle.bases, bundle.skills, bundle.otherOptions, bundle.enemyClasses, bundle.enemyBuff, bundle.pcClasses, bundle.weapons, bundle.mechanics, bundle.rewards, bundle.seed);
         }
 
         final String romPath = writePath;

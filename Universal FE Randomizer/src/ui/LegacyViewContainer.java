@@ -11,9 +11,13 @@ import ui.common.GuiUtil;
 import ui.views.*;
 import ui.views.fe4.*;
 import ui.views.fe9.CONAffinityView;
+import ui.views.fe9.FE9AdvancedClassesView;
 import ui.views.fe9.FE9ClassesView;
 import ui.views.fe9.FE9EnemyBuffView;
+import ui.views.fe9.FE9EnemyClassesView;
 import ui.views.fe9.FE9SkillView;
+import ui.views.gba.GBAAdvancedClassesView;
+import ui.views.gba.GBAEnemyClassesView;
 import util.OptionRecorder;
 
 import java.util.List;
@@ -27,7 +31,8 @@ public class LegacyViewContainer extends YuneViewContainer {
 
     private GrowthsView growthView;
     private BasesView baseView;
-    private ClassesView classView;
+    private GBAAdvancedClassesView classView;
+    private GBAEnemyClassesView enemyClassView;
     private MOVCONAffinityView otherCharOptionView;
     private WeaponsView weaponView;
     private EnemyBuffsView enemyView;
@@ -51,7 +56,9 @@ public class LegacyViewContainer extends YuneViewContainer {
     private FE9SkillView fe9SkillView;
     private CONAffinityView conAffinityView;
     private FE9EnemyBuffView fe9EnemyView;
-    private FE9ClassesView fe9ClassesView;
+//    private FE9ClassesView fe9ClassesView;
+    private FE9AdvancedClassesView fe9AdvancedClassesView;
+    private FE9EnemyClassesView fe9EnemyClassesView;
 
     public LegacyViewContainer(Composite parent, GameType loadedType) {
         super(parent, loadedType);
@@ -132,21 +139,29 @@ public class LegacyViewContainer extends YuneViewContainer {
         weaponData.left = new FormAttachment(fe9SkillView.group, 5);
         weaponView.group.setLayoutData(weaponData);
 
-        fe9ClassesView = new FE9ClassesView(this);
-        fe9ClassesView.group.setSize(200, 200);
+        fe9AdvancedClassesView = new FE9AdvancedClassesView(this);
+        fe9AdvancedClassesView.group.setSize(200, 200);
 
         FormData classData = new FormData();
         classData.top = new FormAttachment(growthView.group, 0, SWT.TOP);
         classData.left = new FormAttachment(weaponView.group, 5);
-        classData.right = new FormAttachment(100, -5);
-        fe9ClassesView.group.setLayoutData(classData);
+        fe9AdvancedClassesView.group.setLayoutData(classData);
+        
+        fe9EnemyClassesView = new FE9EnemyClassesView(this);
+        fe9EnemyClassesView.group.setSize(200, 200);
+        
+        FormData enemyClassData = new FormData();
+        enemyClassData.top = new FormAttachment(growthView.group, 0, SWT.TOP);
+        enemyClassData.left = new FormAttachment(fe9AdvancedClassesView.group, 5);
+        enemyClassData.right = new FormAttachment(100, -5);
+        fe9EnemyClassesView.group.setLayoutData(enemyClassData);
 
         fe9EnemyView = new FE9EnemyBuffView(this, false);
         fe9EnemyView.group.setSize(200, 200);
 
         FormData enemyData = new FormData();
-        enemyData.top = new FormAttachment(fe9ClassesView.group, 5);
-        enemyData.left = new FormAttachment(fe9ClassesView.group, 0, SWT.LEFT);
+        enemyData.top = new FormAttachment(fe9EnemyClassesView.group, 5);
+        enemyData.left = new FormAttachment(fe9AdvancedClassesView.group, 5);
         enemyData.right = new FormAttachment(100, -5);
         fe9EnemyView.group.setLayoutData(enemyData);
     }
@@ -188,7 +203,7 @@ public class LegacyViewContainer extends YuneViewContainer {
         weaponData.bottom = new FormAttachment(100, -10);
         weaponView.group.setLayoutData(weaponData);
 
-        classView = new ClassesView(this, type);
+        classView = new GBAAdvancedClassesView(this, type, SWT.VERTICAL);
         classView.group.setSize(200, 200);
 
         FormData classData = new FormData();
@@ -196,26 +211,34 @@ public class LegacyViewContainer extends YuneViewContainer {
         classData.left = new FormAttachment(weaponView.group, 5);
         classData.width = GuiUtil.DEFAULT_ITEM_WIDTH_300;
         classView.group.setLayoutData(classData);
+        
+        enemyClassView = new GBAEnemyClassesView(this, type);
+        enemyClassView.group.setSize(200, 200);
+        
+        FormData enemyData = new FormData();
+        enemyData.top = new FormAttachment(classView.group, 0, SWT.TOP);
+        enemyData.left = new FormAttachment(classView.group, 5);
+        enemyData.width = GuiUtil.DEFAULT_ITEM_WIDTH_300;
+        enemyClassView.group.setLayoutData(enemyData);
 
         enemyView = new EnemyBuffsView(this);
         enemyView.group.setSize(200, 200);
 
-        FormData enemyData = new FormData();
-        enemyData.top = new FormAttachment(classView.group, 5);
-        enemyData.left = new FormAttachment(classView.group, 0, SWT.LEFT);
-        enemyData.right = new FormAttachment(classView.group, 0, SWT.RIGHT);
-        enemyData.bottom = new FormAttachment(100, -10);
+        enemyData = new FormData();
+        enemyData.top = new FormAttachment(enemyClassView.group, 5);
+        enemyData.left = new FormAttachment(enemyClassView.group, 0, SWT.LEFT);
+        enemyData.right = new FormAttachment(enemyClassView.group, 0, SWT.RIGHT);
         enemyView.group.setLayoutData(enemyData);
 
         recruitView = new RecruitmentView(this, type);
         recruitView.group.setSize(200, 200);
 
         FormData recruitData = new FormData();
-        recruitData.top = new FormAttachment(classView.group, 0, SWT.TOP);
-        recruitData.left = new FormAttachment(classView.group, 5);
+        recruitData.top = new FormAttachment(enemyClassView.group, 0, SWT.TOP);
+        recruitData.left = new FormAttachment(enemyClassView.group, 5);
         recruitView.group.setLayoutData(recruitData);
         
-        shopView = new ShopView(this);
+        shopView = new ShopView(this, type);
         shopView.group.setSize(200, 200);
         
         FormData shopData = new FormData();
@@ -336,6 +359,7 @@ public class LegacyViewContainer extends YuneViewContainer {
         growthView.initialize(bundle.growths);
         baseView.initialize(bundle.bases);
         classView.initialize(bundle.classes);
+        enemyClassView.initialize(bundle.enemyClasses);
         weaponView.initialize(bundle.weapons);
         enemyView.initialize(bundle.enemies);
         miscView.initialize(bundle.otherOptions);
@@ -357,6 +381,7 @@ public class LegacyViewContainer extends YuneViewContainer {
         bundle.otherOptions = miscView.getOptions();
         bundle.rewards = rewardView.getOptions();
         bundle.classes = classView.getOptions();
+        bundle.enemyClasses = enemyClassView.getOptions();
         bundle.enemies = enemyView.getOptions();
         bundle.weapons = weaponView.getOptions();
         bundle.shopOptions = shopView.getOptions();
@@ -410,7 +435,8 @@ public class LegacyViewContainer extends YuneViewContainer {
         // FE9 Specific
         conAffinityView.initialize(bundle.otherOptions);
         fe9SkillView.initialize(bundle.skills);
-        fe9ClassesView.initialize(bundle.classes);
+        fe9AdvancedClassesView.initialize(bundle.pcClasses);
+        fe9EnemyClassesView.initialize(bundle.enemyClasses);
         fe9EnemyView.initialize(bundle.enemyBuff);
     }
 
@@ -426,6 +452,24 @@ public class LegacyViewContainer extends YuneViewContainer {
         bundle.enemyBuff = fe9EnemyView.getOptions();
         bundle.otherOptions = conAffinityView.getOptions();
         bundle.skills = fe9SkillView.getOptions();
-        bundle.classes = fe9ClassesView.getOptions();
+        bundle.pcClasses = fe9AdvancedClassesView.getOptions();
+    }
+    
+    @Override
+    public boolean validate() {
+    	if (fe9AdvancedClassesView != null) {
+    		return fe9AdvancedClassesView.validate();
+    	}
+    	
+    	return true;
+    }
+    
+    @Override
+    public String getValidationError() {
+    	if (fe9AdvancedClassesView != null) {
+    		return fe9AdvancedClassesView.getValidationError();
+    	}
+    	
+    	return null;
     }
 }

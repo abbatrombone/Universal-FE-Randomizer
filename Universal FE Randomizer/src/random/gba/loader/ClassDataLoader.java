@@ -257,6 +257,9 @@ public class ClassDataLoader {
 				freeSpace.setValue(charClass.getData(), "Added Class Data for Class 0x" + Integer.toHexString(charClass.getID()));
 			}
 			
+			// Add one empty separator item
+			freeSpace.setValue(WhyDoesJavaNotHaveThese.byteArrayByRepeatingBytes(new byte[] {0x00}, provider.bytesPerClass()), "ClassRepointBuffer");
+			
 			// Update the pointers to this table.
 			compiler.findAndReplace(new FindAndReplace(WhyDoesJavaNotHaveThese.gbaAddressFromOffset(startingOffset), WhyDoesJavaNotHaveThese.gbaAddressFromOffset(newStartingOffset), true));
 		}
@@ -292,11 +295,11 @@ public class ClassDataLoader {
 		return classForID(correspondingClass.getID());
 	}
 	
-	public GBAFEClassData[] potentialClasses(GBAFEClassData sourceClass, Boolean isForEnemy, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean excludeSource, Boolean requireAttack, Boolean requireRange, Boolean requireMelee, Boolean applyRestrictions, ClassOptions.GenderRestrictionOption restrictGender, GBAFEClassData mustLoseToClass) {
-		return potentialClasses(sourceClass, isForEnemy, excludeLords, excludeThieves, excludeSpecial, false, excludeSource, requireAttack, requireRange, requireMelee, applyRestrictions, restrictGender, mustLoseToClass);
+	public GBAFEClassData[] potentialClasses(GBAFEClassData sourceClass, Boolean isBoss, Boolean isForMinion, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean excludeSource, Boolean requireAttack, Boolean requireRange, Boolean requireMelee, Boolean applyRestrictions, ClassOptions.GenderRestrictionOption restrictGender, GBAFEClassData mustLoseToClass) {
+		return potentialClasses(sourceClass, isBoss, isForMinion, excludeLords, excludeThieves, excludeSpecial, false, excludeSource, requireAttack, requireRange, requireMelee, applyRestrictions, restrictGender, mustLoseToClass);
 	}
 	
-	public GBAFEClassData[] potentialClasses(GBAFEClassData sourceClass, Boolean isForEnemy, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean separateMonsters, Boolean excludeSource, Boolean requireAttack, Boolean requireRange, Boolean requireMelee, Boolean applyRestrictions, ClassOptions.GenderRestrictionOption restrictGender, GBAFEClassData mustLoseToClass) {
+	public GBAFEClassData[] potentialClasses(GBAFEClassData sourceClass, Boolean isBoss, Boolean isForMinion, Boolean excludeLords, Boolean excludeThieves, Boolean excludeSpecial, Boolean separateMonsters, Boolean excludeSource, Boolean requireAttack, Boolean requireRange, Boolean requireMelee, Boolean applyRestrictions, ClassOptions.GenderRestrictionOption restrictGender, GBAFEClassData mustLoseToClass) {
 		GBAFEClass sourceCharClass = provider.classWithID(sourceClass.getID());
 		Set<GBAFEClass> targetClasses = null;
 		
@@ -317,7 +320,7 @@ public class ClassDataLoader {
 		}
 		
 		if (targetClasses == null || targetClasses.size() == 0) {
-			targetClasses = provider.targetClassesForRandomization(sourceCharClass, isForEnemy, options);
+			targetClasses = provider.targetClassesForRandomization(sourceCharClass, isBoss, isForMinion, options);
 		}
 		
 		return feClassesFromSet(targetClasses);
@@ -396,6 +399,13 @@ public class ClassDataLoader {
 		return charClass != null ? charClass.canAttack() : false;
 	}
 	
+	public boolean areClassesSimilar(GBAFEClassData class1, GBAFEClassData class2) {
+		if (class1.getID() == class2.getID()) { return true; }
+		GBAFEClass charClass1 = provider.classWithID(class1.getID());
+		GBAFEClass charClass2 = provider.classWithID(class2.getID());
+		return provider.similarClassesTo(charClass1).contains(charClass2);
+	}
+	
 	public List<String> ability1Flags() {
 		return provider.charClassAbility1Flags();
 	}
@@ -460,6 +470,15 @@ public class ClassDataLoader {
 		if (isFemale) { name = name + " (F)"; }
 		
 		if (isInitial) {
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base HP", Integer.toString(charClass.getBaseHP()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base STR/MAG", Integer.toString(charClass.getBaseSTR()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base SKL", Integer.toString(charClass.getBaseSKL()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base SPD", Integer.toString(charClass.getBaseSPD()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base LCK", Integer.toString(charClass.getBaseLCK()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base DEF", Integer.toString(charClass.getBaseDEF()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base RES", Integer.toString(charClass.getBaseRES()));
+			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Base CON", Integer.toString(charClass.getCON()));
+			
 			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "HP Growth", String.format("%d%%", charClass.getHPGrowth()));
 			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "STR/MAG Growth", String.format("%d%%", charClass.getSTRGrowth()));
 			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "SKL Growth", String.format("%d%%", charClass.getSKLGrowth()));
@@ -470,6 +489,15 @@ public class ClassDataLoader {
 			
 			rk.recordOriginalEntry(RecordKeeperCategoryKey, name, "Movement Range", Integer.toString(charClass.getMOV()));
 		} else {
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base HP", Integer.toString(charClass.getBaseHP()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base STR/MAG", Integer.toString(charClass.getBaseSTR()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base SKL", Integer.toString(charClass.getBaseSKL()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base SPD", Integer.toString(charClass.getBaseSPD()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base LCK", Integer.toString(charClass.getBaseLCK()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base DEF", Integer.toString(charClass.getBaseDEF()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base RES", Integer.toString(charClass.getBaseRES()));
+			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "Base CON", Integer.toString(charClass.getCON()));
+			
 			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "HP Growth", String.format("%d%%", charClass.getHPGrowth()));
 			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "STR/MAG Growth", String.format("%d%%", charClass.getSTRGrowth()));
 			rk.recordUpdatedEntry(RecordKeeperCategoryKey, name, "SKL Growth", String.format("%d%%", charClass.getSKLGrowth()));

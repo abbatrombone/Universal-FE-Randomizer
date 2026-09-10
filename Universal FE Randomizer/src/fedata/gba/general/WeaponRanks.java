@@ -116,6 +116,17 @@ public class WeaponRanks {
         this(character, null);
     }
     
+    public WeaponRanks(WeaponRanks reference, WeaponType typeToOverride, WeaponRank rankToSet) {
+    	swordRank = typeToOverride == WeaponType.SWORD ? rankToSet : reference.swordRank;
+    	lanceRank = typeToOverride == WeaponType.LANCE ? rankToSet : reference.lanceRank;
+    	axeRank = typeToOverride == WeaponType.AXE ? rankToSet : reference.axeRank;
+    	bowRank = typeToOverride == WeaponType.BOW ? rankToSet : reference.bowRank;
+    	animaRank = typeToOverride == WeaponType.ANIMA ? rankToSet : reference.animaRank;
+    	lightRank = typeToOverride == WeaponType.LIGHT ? rankToSet : reference.lightRank;
+    	darkRank = typeToOverride == WeaponType.DARK ? rankToSet : reference.darkRank;
+    	staffRank = typeToOverride == WeaponType.STAFF ? rankToSet : reference.staffRank;
+    }
+    
     public WeaponRanks(GBAFECharacterData character, GBAFEClassData charClass, boolean roundToNearest, GameType type) {
     	WeaponRank sword = WeaponRank.valueOf(character.getSwordRank());
         WeaponRank lance = WeaponRank.valueOf(character.getLanceRank());
@@ -198,6 +209,10 @@ public class WeaponRanks {
     }
     
     public WeaponType getHighestRank() {
+    	return getHighestRank(true);
+    }
+    
+    public WeaponType getHighestRank(boolean includeStaff) {
     	WeaponType type = null;
     	WeaponRank highestRank = null;
     	if (swordRank != WeaponRank.NONE && (highestRank == null || swordRank.isHigherThan(highestRank))) { highestRank = swordRank; type = WeaponType.SWORD; }
@@ -207,7 +222,7 @@ public class WeaponRanks {
     	if (lightRank != WeaponRank.NONE && (highestRank == null || lightRank.isHigherThan(highestRank))) { highestRank = lightRank; type = WeaponType.LIGHT; }
     	if (animaRank != WeaponRank.NONE && (highestRank == null || animaRank.isHigherThan(highestRank))) { highestRank = animaRank; type = WeaponType.ANIMA; }
     	if (darkRank != WeaponRank.NONE && (highestRank == null || darkRank.isHigherThan(highestRank))) { highestRank = darkRank; type = WeaponType.DARK; }
-    	if (staffRank != WeaponRank.NONE && (highestRank == null || staffRank.isHigherThan(highestRank))) { highestRank = staffRank; type = WeaponType.STAFF; }
+    	if (includeStaff && staffRank != WeaponRank.NONE && (highestRank == null || staffRank.isHigherThan(highestRank))) { highestRank = staffRank; type = WeaponType.STAFF; }
     	
     	return type;
     }
