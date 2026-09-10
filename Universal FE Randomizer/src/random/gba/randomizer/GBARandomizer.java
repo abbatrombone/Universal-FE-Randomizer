@@ -171,7 +171,7 @@ public class GBARandomizer extends Randomizer {
 
 				try {
 					Boolean success = UPSPatcher.applyUPSPatch(
-							"QoL.PATCH.20250812170042.ups",
+							"FE7QoLPatch.ups",
 							sourcePath,
 							tempPath,
 							null
