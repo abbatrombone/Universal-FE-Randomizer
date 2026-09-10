@@ -16,7 +16,6 @@ import io.DiffApplicator;
 import io.FileHandler;
 import io.UPSPatcher;
 import random.gba.loader.*;
-import io.UPSPatcherStatusListener;
 import random.gba.loader.ItemDataLoader.AdditionalData;
 import random.gba.randomizer.shuffling.CharacterShuffler;
 import random.general.Randomizer;
@@ -127,9 +126,8 @@ public class GBARandomizer extends Randomizer {
 			notifyError("Failed to open source file.");
 			return;
 		}
-		
 		String tempPath = null;
-		
+
 		switch (gameType) {
 		case FE6:
 			// Apply patch first, if necessary.
@@ -163,11 +161,77 @@ public class GBARandomizer extends Randomizer {
 			updateProgress(0.1);
 			try { generateFE6DataLoaders(); } catch (Exception e) { notifyError("Encountered error while loading data.\n\n" + e.getClass().getSimpleName() + "\n\nStack Trace:\n\n" + String.join("\n", Arrays.asList(e.getStackTrace()).stream().map(element -> (element.toString())).limit(5).collect(Collectors.toList()))); return; }
 			break;
-		case FE7:
-			updateStatusString("Loading Data...");
-			updateProgress(0.01);
-			try { generateFE7DataLoaders(); } catch (Exception e) { notifyError("Encountered error while loading data.\n\n" + e.getClass().getSimpleName() + "\n\nStack Trace:\n\n" + String.join("\n", Arrays.asList(e.getStackTrace()).stream().map(element -> (element.toString())).limit(5).collect(Collectors.toList()))); return; }
-			break;
+			case FE7:
+
+				// Has to be done in this order
+				updateStatusString("Applying FE7 QoL Patch...");
+				updateProgress(0.01);
+
+				tempPath = new String(targetPath).concat(".tmp");
+
+				try {
+					Boolean success = UPSPatcher.applyUPSPatch(
+							"QoL.PATCH.20250812170042.ups",
+							sourcePath,
+							tempPath,
+							null
+					);
+
+					if (!success) {
+						notifyError("Failed to apply FE7 QoL patch.");
+						return;
+					}
+
+				} catch (Exception e) {
+					notifyError(
+							"Encountered error while applying FE7 QoL patch.\n\n"
+									+ e.getClass().getSimpleName()
+									+ "\n\nStack Trace:\n\n"
+									+ String.join(
+									"\n",
+									Arrays.asList(e.getStackTrace())
+											.stream()
+											.map(element -> element.toString())
+											.limit(5)
+											.collect(Collectors.toList())
+							)
+					);
+					return;
+				}
+
+				// WILL WANT to add spot to check for a box that wants the QoL patch later, Currently it just adds it
+				try {
+					handler = new FileHandler(tempPath);
+				} catch (IOException e) {
+					System.err.println("Unable to open post-patched FE7 file.");
+					e.printStackTrace();
+					notifyError("Failed to open QoL-patched FE7 ROM.");
+					return;
+				}
+
+				updateStatusString("Loading Data...");
+				updateProgress(0.01);
+
+				try {
+					generateFE7DataLoaders();
+				} catch (Exception e) {
+					notifyError(
+							"Encountered error while loading data.\n\n"
+									+ e.getClass().getSimpleName()
+									+ "\n\nStack Trace:\n\n"
+									+ String.join(
+									"\n",
+									Arrays.asList(e.getStackTrace())
+											.stream()
+											.map(element -> element.toString())
+											.limit(5)
+											.collect(Collectors.toList())
+							)
+					);
+					return;
+				}
+
+				break;
 		case FE8:
 			updateStatusString("Loading Data...");
 			updateProgress(0.01);
@@ -317,12 +381,11 @@ public class GBARandomizer extends Randomizer {
 		default:
 			break;
 		}
-		
 		updateStatusString("Done!");
 		updateProgress(1);
 		notifyCompletion(recordKeeper, null);
 	}
-	
+
 	private void generateFE7DataLoaders() {
 		handler.setAppliedDiffs(diffCompiler);
 		
@@ -704,7 +767,7 @@ public class GBARandomizer extends Randomizer {
 				
 			}
 		}
-		
+
 		// Some characters have discrepancies between character data and chapter data. We'll try to address that before we get to any modifications.
 		charData.applyLevelCorrectionsIfNecessary();
 		
@@ -749,155 +812,16 @@ public class GBARandomizer extends Randomizer {
 				}
 			}
 		}
-		
-		// Chapter 16 (Whereabouts Unknown) has a tutorial check that keeps appearing even if we're not in tutorial.
-		// I suspect the flag for tutorial is always set for some reason.
-		// The proper way is to interpret the EA properly, but we can just change specifically what we want to 
-		// get the desired results (i.e. always skip the tutorial text).
-		if (gameType == GameType.FE7) {
-			// All we need to do is replace the check for the tutorial with a GOTO 0x32, which is where it goes if the check fails (i.e. the tutorial is not active).
-			// This should be at 0xCB163C.
-			diffCompiler.addDiff(new Diff(0xCB163CL, 8, new byte[] {0x45, 0, 0, 0, 0x32, 0, 0, 0}, new byte[] {0x54, 0, 0, 0, 0x32, 0, 0, 0}));
-			
-			// Lucius's inventory in this chapter is set with an ASMC call, so we need to modify that item directly.
-			// Get a basic weapon for him.
-			GBAFECharacterData lucius = charData.characterWithID(FE7Data.Character.LUCIUS.ID);
-			GBAFEItemData luciusItem = itemData.getBasicWeaponForCharacter(lucius, false, false, rng);
-			// This byte lives at 0x7d0c2, which in ASM is a MOV constant into r0. Normally it's 0x3E (which is Lightning).
-			diffCompiler.addDiff(new Diff(0x7D0C2L, 1, new byte[] {(byte)luciusItem.getID()}, new byte[] {0x3E}));
-			// In case it's useful, he also gets a Vulnerary that's set at 0x7D0D8, which is normally 0x6B for a Vulnerary.
-		}
 
 		// For some reason, FE7's Emblem Bow has no effectiveness added to it.
 		if (gameType == GameType.FE7) {
 			GBAFEItemData emblemBow = itemData.itemWithID(FE7Data.Item.EMBLEM_BOW.ID);
 			emblemBow.setEffectivenessPointer(itemData.flierEffectPointer());
-			
-			// FE7's Aureola is also an S-rank tome with no cost associated with it. Since it can be randomized into shops now, give it the same cost as other S rank weapons (i.e. 600 per use).
-			GBAFEItemData aureola = itemData.itemWithID(FE7Data.Item.AUREOLA.ID);
-			aureola.setCostPerUse(600);
-			
-			// None of the Dancer Rings have costs either. Give them an appropriate cost. They have 15 uses each. For now, let's try a total cost of 6000 (400 per use).
-			for (FE7Data.Item ring : FE7Data.Item.allDancingRings) {
-				GBAFEItemData ringItem = itemData.itemWithID(ring.ID);
-				ringItem.setCostPerUse(400);
-			}
-			
-			// Emblem weapons and Poison weapons also have no cost. Give them the same cost per use as their iron counterparts.
-			GBAFEItemData emblemSword = itemData.itemWithID(FE7Data.Item.EMBLEM_SWORD.ID);
-			GBAFEItemData poisonSword = itemData.itemWithID(FE7Data.Item.POISON_SWORD.ID);
-			GBAFEItemData ironSword = itemData.itemWithID(FE7Data.Item.IRON_SWORD.ID);
-			emblemSword.setCostPerUse(ironSword.getCostPerUse());
-			poisonSword.setCostPerUse(ironSword.getCostPerUse());
-			
-			GBAFEItemData emblemLance = itemData.itemWithID(FE7Data.Item.EMBLEM_LANCE.ID);
-			GBAFEItemData poisonLance = itemData.itemWithID(FE7Data.Item.POISON_LANCE.ID);
-			GBAFEItemData ironLance = itemData.itemWithID(FE7Data.Item.IRON_LANCE.ID);
-			emblemLance.setCostPerUse(ironLance.getCostPerUse());
-			poisonLance.setCostPerUse(ironLance.getCostPerUse());
-			
-			
-			GBAFEItemData emblemAxe = itemData.itemWithID(FE7Data.Item.EMBLEM_AXE.ID);
-			GBAFEItemData poisonAxe = itemData.itemWithID(FE7Data.Item.POISON_AXE.ID);
-			GBAFEItemData ironAxe = itemData.itemWithID(FE7Data.Item.IRON_AXE.ID);
-			poisonAxe.setCostPerUse(ironAxe.getCostPerUse());
-			emblemAxe.setCostPerUse(ironAxe.getCostPerUse());
-			
-			GBAFEItemData ironBow = itemData.itemWithID(FE7Data.Item.IRON_BOW.ID);
-			GBAFEItemData poisonBow = itemData.itemWithID(FE7Data.Item.POISON_BOW.ID);
-			poisonBow.setCostPerUse(ironBow.getCostPerUse());
-			emblemBow.setCostPerUse(ironBow.getCostPerUse());
-			
-			// Afa Drops are also free. Give it an expensive cost (10,000?)
-			GBAFEItemData afaDrops = itemData.itemWithID(FE7Data.Item.AFA_DROPS.ID);
-			afaDrops.setCostPerUse(10000);
-			
-			// Emblem Seal is also free. It's not nearly as useful, IMO.
-			GBAFEItemData emblemSeal = itemData.itemWithID(FE7Data.Item.EMBLEM_SEAL.ID);
-			emblemSeal.setCostPerUse(1000); 
-			
-			// Female Paladins (i.e. Isadora) actually have a custom promoted sprite (0x9). Any character that has this class should use that custom sprite.
-			List<GBAFECharacterData> allCharacters = charData.characterList();
-			List<GBAFECharacterData> femalePaladins = allCharacters.stream().filter(character -> {
-				return character.getClassID() == FE7Data.CharacterClass.PALADIN_F.ID;
-			}).collect(Collectors.toList());
-			femalePaladins.stream().forEach(character -> {
-				DebugPrinter.log(DebugPrinter.Key.CLASS_RANDOMIZER, "Giving female paladin " + character.displayString() + " custom promoted battle sprite 0x9.");
-				character.setCustomPromotedBattleSprite(0x9); // TODO: Document the constants used here.
-				character.commitChanges();
-			});
 		}
 		
 		// Allow FE6 to be able to use hard mode without needing clear data.
 		if (gameType == GameType.FE6) {
 			diffCompiler.addDiff(new Diff(FE6Data.HardModeHackOffset, FE6Data.HardModeHackNewData.length, FE6Data.HardModeHackNewData, FE6Data.HardModeHackOriginalData));
-			
-			// Now that shops are randomizable, give costs to items that may not have had them. For FE6, it's just poison weapons.
-			GBAFEItemData poisonSword = itemData.itemWithID(FE6Data.Item.POISON_SWORD.ID);
-			GBAFEItemData ironSword = itemData.itemWithID(FE6Data.Item.IRON_SWORD.ID);
-			poisonSword.setCostPerUse(ironSword.getCostPerUse());
-			
-			GBAFEItemData poisonLance = itemData.itemWithID(FE6Data.Item.POISON_LANCE.ID);
-			GBAFEItemData ironLance = itemData.itemWithID(FE6Data.Item.IRON_LANCE.ID);
-			poisonLance.setCostPerUse(ironLance.getCostPerUse());
-			
-			GBAFEItemData poisonAxe = itemData.itemWithID(FE6Data.Item.POISON_AXE.ID);
-			GBAFEItemData ironAxe = itemData.itemWithID(FE6Data.Item.IRON_AXE.ID);
-			poisonAxe.setCostPerUse(ironAxe.getCostPerUse());
-			
-			GBAFEItemData poisonBow = itemData.itemWithID(FE6Data.Item.POISON_BOW.ID);
-			GBAFEItemData ironBow = itemData.itemWithID(FE6Data.Item.IRON_BOW.ID);
-			poisonBow.setCostPerUse(ironBow.getCostPerUse());
-		}
-		
-		// FE8 Item costs for shop randomization.
-		if (gameType == GameType.FE8) {
-			// Poison weapons, as usual.
-			GBAFEItemData poisonSword = itemData.itemWithID(FE8Data.Item.POISON_SWORD.ID);
-			GBAFEItemData ironSword = itemData.itemWithID(FE8Data.Item.IRON_SWORD.ID);
-			poisonSword.setCostPerUse(ironSword.getCostPerUse());
-			
-			GBAFEItemData poisonLance = itemData.itemWithID(FE8Data.Item.TOXIN_LANCE.ID);
-			GBAFEItemData ironLance = itemData.itemWithID(FE8Data.Item.IRON_LANCE.ID);
-			poisonLance.setCostPerUse(ironLance.getCostPerUse());
-			
-			GBAFEItemData poisonAxe = itemData.itemWithID(FE8Data.Item.POISON_AXE.ID);
-			GBAFEItemData ironAxe = itemData.itemWithID(FE8Data.Item.IRON_AXE.ID);
-			poisonAxe.setCostPerUse(ironAxe.getCostPerUse());
-			
-			GBAFEItemData poisonBow = itemData.itemWithID(FE8Data.Item.POISON_BOW.ID);
-			GBAFEItemData ironBow = itemData.itemWithID(FE8Data.Item.IRON_BOW.ID);
-			poisonBow.setCostPerUse(ironBow.getCostPerUse());
-			
-			// Hatchet doesn't have one either.
-			// For reference, Iron Swords have 10 gold vs Slim Sword's 16 gold.
-			// Hand Axes cost 15 gold, so it should be slightly more for the benefits of higher accuracy and lighter weight.
-			// At 20 gold per use x 50 uses, that's 1000 gold per Hatchet to Hand Axe's 300 and Tomahawk's 3000.
-			GBAFEItemData hatchet = itemData.itemWithID(FE8Data.Item.HATCHET.ID);
-			hatchet.setCostPerUse(20);
-			
-			// The promo monster-slaying weapons also have no cost. Since they are
-			// effective against monsters, they should cost a bit more than Iron counterparts.
-			// They also have 60 uses, so they will naturally be more expensive.
-			// Using Iron level weapons as a reference, Axes are the cheapest, followed by Lances, then Swords, then Bows.
-			// Effective weapons are generally a decent bit more expensive, so we should be aiming towards the 3000 - 5000 range, since they have 60 uses.
-			// This gives them an effective cost per use between 50 and 83.
-			GBAFEItemData fiendCleaver = itemData.itemWithID(FE8Data.Item.FIENDCLEAVER.ID);
-			GBAFEItemData brightLance = itemData.itemWithID(FE8Data.Item.BRIGHT_LANCE.ID);
-			GBAFEItemData shadowKiller = itemData.itemWithID(FE8Data.Item.SHADOWKILLER.ID);
-			GBAFEItemData beaconBow = itemData.itemWithID(FE8Data.Item.BEACON_BOW.ID);
-			fiendCleaver.setCostPerUse(50); // 3000
-			brightLance.setCostPerUse(61); // 3660
-			shadowKiller.setCostPerUse(72); // 4320
-			beaconBow.setCostPerUse(83); // 4980
-			
-			// Metis's Tome also needs a cost.
-			GBAFEItemData metisTome = itemData.itemWithID(FE8Data.Item.METIS_TOME.ID);
-			metisTome.setCostPerUse(10000);
-			
-			// Juna Fruit also doesn't have anything set.
-			GBAFEItemData junaFruit = itemData.itemWithID(FE8Data.Item.JUNA_FRUIT.ID);
-			junaFruit.setCostPerUse(5000);
 		}
 		
 		// Hack in mode select without needing clear data for FE7.
@@ -1762,6 +1686,7 @@ public class GBARandomizer extends Randomizer {
 					
 					textData.setStringAtIndex(0x1225, lynWeaponName + "[X]");
 					GBAFEItemData referenceWeapon = itemData.itemWithID(FE7Data.Item.MANI_KATTI.ID);
+
 					GBAFEItemData newWeapon = referenceWeapon.createLordWeapon(FE7Data.Character.LYN.ID, 0x9F, 0x1225, 0x0, 
 							lynSelectedType, unbreakablePrfs, lynClass.getCON() + lyn.getConstitution(), 
 							0xAD, itemData, freeSpace);
