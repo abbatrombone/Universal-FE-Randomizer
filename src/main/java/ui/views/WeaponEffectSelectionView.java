@@ -228,47 +228,23 @@ public class WeaponEffectSelectionView extends Composite {
 		criticalControl.getMaxSpinner().setValues(50, 20, 100, 0, 5, 5);
 		criticalControl.setEnabled(false);
 		
-		if (type == GameType.FE9) {
-			magicDamageOption = new NumericWeightView(this, "Magic Damage", "Allows random physical weapons to gain a magic attack that targets RES. Tomes are unaffected.", 1, 1, new NumericWeightViewListener() {
-				@Override
-				public void onEnableChanged(boolean enabled) {
-					notifySelectionChange();
-					updatePercentages();
-					magicDamageOption.setEnabled(enabled);
-				}
+		magicDamageOption = new NumericWeightView(this, "Magic Damage", magicDamageOptionToolTipText(type), 1, 1, new NumericWeightViewListener() {
+			@Override
+			public void onEnableChanged(boolean enabled) {
+				notifySelectionChange();
+				updatePercentages();
+			}
 
-				@Override
-				public void onValueChanged(int newValue) {
-					if (newValue == 0) {
-						magicDamageOption.disable();
-						notifySelectionChange();
-					}
-					
-					updatePercentages();
-				}
-				
-			});
-		} else {
-			magicDamageOption = new NumericWeightView(this, "Magic Damage", "Allows random physical weapons to gain a magic attack. Melee weapons gain range if they were not already ranged. Weapons get assigned a random magic animation. Tomes are unaffected.", 1, 1, new NumericWeightViewListener() {
-				@Override
-				public void onEnableChanged(boolean enabled) {
+			@Override
+			public void onValueChanged(int newValue) {
+				if (newValue == 0) {
+					magicDamageOption.disable();
 					notifySelectionChange();
-					updatePercentages();
-					magicDamageOption.setEnabled(enabled);
 				}
+				updatePercentages();
+			}
 
-				@Override
-				public void onValueChanged(int newValue) {
-					if (newValue == 0) {
-						magicDamageOption.disable();
-						notifySelectionChange();
-					}
-					
-					updatePercentages();
-				}
-				
-			});
-		}
+		});
 		magicDamageOption.setLayoutData(data);
 		allOptions.add(magicDamageOption);
 		
@@ -468,6 +444,13 @@ public class WeaponEffectSelectionView extends Composite {
 		updatePercentages();
 	}
 	
+	private static String magicDamageOptionToolTipText(GameType type) {
+		if (type == GameType.FE9) {
+			return "Allows random physical weapons to gain a magic attack that targets RES. Tomes are unaffected.";
+		}else{
+			return "Allows random physical weapons to gain a magic attack. Melee weapons gain range if they were not already ranged. Weapons get assigned a random magic animation. Tomes are unaffected.";
+		}
+	}
 	public void updatePercentages() {
 		int totalWeight = allOptions.stream().map(option -> option.getWeight()).reduce(0, (int1, int2) -> int1 + int2);
 		allOptions.forEach(option -> option.updateWeightTotal(totalWeight));
