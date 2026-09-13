@@ -36,10 +36,10 @@ public class ClassRandomizer {
 	
 	public static void randomizeClassMovement(int minMOV, int maxMOV, ClassDataLoader classData, Random rng) {
 		GBAFEClassData[] allClasses = classData.allClasses();
-		List<GBAFEClassData> unpromotedClasses = Arrays.asList(allClasses).stream()
-				.filter(currentClass -> classData.isPromotedClass(currentClass.getID()) == false)
+		List<GBAFEClassData> unpromotedClasses = Arrays.stream(allClasses)
+				.filter(currentClass -> !classData.isPromotedClass(currentClass.getID()))
 				.sorted(GBAFEClassData.defaultComparator)
-				.collect(Collectors.toList());
+				.toList();
 		for (GBAFEClassData currentClass : unpromotedClasses) {
 			if (currentClass.getMOV() > 0) {
 				// #259: Allow for maximum provided in UI
@@ -50,10 +50,10 @@ public class ClassRandomizer {
 		}
 		
 		// Make sure all promoted classes have at least their base class's MOV so you can never lose MOV from promotion.
-		List<GBAFEClassData> promotedClasses = Arrays.asList(allClasses).stream()
+		List<GBAFEClassData> promotedClasses = Arrays.stream(allClasses)
 				.filter(currentClass -> classData.isPromotedClass(currentClass.getID()))
 				.sorted(GBAFEClassData.defaultComparator)
-				.collect(Collectors.toList());
+				.toList();
 		for (GBAFEClassData currentClass : promotedClasses) {
 			List<GBAFEClassData> unpromoted = classData.demotionOptions(currentClass.getID());
 			int highestUnpromotedMOV = 0;
@@ -226,7 +226,7 @@ public class ClassRandomizer {
 		}
 		
 		PoolDistributor<GBAFEClassData> classDistributor = new PoolDistributor<GBAFEClassData>();
-		Arrays.asList(classData.allClasses()).stream().forEach(charClass -> {
+		Arrays.stream(classData.allClasses()).forEach(charClass -> {
 			classDistributor.addItem(charClass);
 		});
 		
@@ -269,7 +269,7 @@ public class ClassRandomizer {
 						});
 					}
 					classSet.retainAll(classDistributor.possibleResults());
-					List<GBAFEClassData> classList = classSet.stream().sorted(GBAFEClassData.defaultComparator).collect(Collectors.toList());
+					List<GBAFEClassData> classList = classSet.stream().sorted(GBAFEClassData.defaultComparator).toList();
 					PoolDistributor<GBAFEClassData> pool = new PoolDistributor<GBAFEClassData>();
 					for (GBAFEClassData charClass : classList) {
 						pool.addItem(charClass, classDistributor.itemCount(charClass));
@@ -335,7 +335,7 @@ public class ClassRandomizer {
 				continue;
 			}
 			
-			if (classData.isValidClass(originalClassID) == false) {
+			f (!classData.isValidClass(originalClassID)) {
 				DebugPrinter.log(DebugPrinter.Key.CLASS_RANDOMIZER, "Skipping character " + character.displayString() + " because class is not a valid candidate for randomization (" + originalClass.displayString() + ").");
 				continue;
 			}
@@ -521,7 +521,7 @@ public class ClassRandomizer {
 							targetClass = possibleClasses[randomIndex];
 						
 						
-							if (classData.isFlying(originalClass.getID()) == false && classData.isFlying(targetClass.getID())) {
+							if (!classData.isFlying(originalClass.getID()) && classData.isFlying(targetClass.getID())) {
 								// If this is a new flier, roll one more time. 
 								// Reduce the number of non-flying minions that become fliers.
 								randomIndex = rng.nextInt(possibleClasses.length);
@@ -1056,9 +1056,7 @@ public class ClassRandomizer {
 						}
 					}
 				}
-				if (isHealer && !canAttack) {
-					assert hasStaff : "No staff for healer.";
-				}
+				assert !isHealer || canAttack || hasStaff : "No staff for healer.";
 			}
 		}
 	}
